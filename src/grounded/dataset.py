@@ -82,11 +82,4 @@ class Dataset:
                 f"Error: Failed to read image with index {index} from dataset"
             )
 
-        if image.shape != self._shape:
-            h, w = self._shape
-            return cast(
-                NDArray[np.uint8],
-                cv.resize(image, dsize=(w, h), interpolation=cv.INTER_LINEAR),
-            )
-        else:
-            return image
+        return image_utils.resized(image, self._shape)

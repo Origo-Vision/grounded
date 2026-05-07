@@ -5,13 +5,15 @@ import sys
 from matplotlib import pyplot as plt
 
 from grounded.dataset import Dataset
+import grounded.image.utils as image_utils
 
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(256, 256))
-    image = dataset[10]
+    image = image_utils.normalized(dataset[10])
+    window = image_utils.tukey_window(shape=(256, 256))
 
-    plt.imshow(image, cmap="gray")
+    plt.imshow(image * window, cmap="gray")
     plt.show()
 
     return 0

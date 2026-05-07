@@ -4,28 +4,9 @@ import cv2 as cv
 import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
-import optivect.core.math.matrix as matrix
+import grounded.math.matrix as matrix
 
 
-def normalized_grayscale(image: NDArray[Any]) -> NDArray[np.float64]:
-    """
-    Normalize an image to a grayscale (float32) in range [0 1].
-
-    Parameters:
-        image: The input image.
-
-    Returns:
-        The normalized image.s
-    """
-    if len(image.shape) == 3 and image.dtype == np.uint8:
-        image = cv.cvtColor(image, cv.COLOR_RGB2GRAY).astype(np.float64) / 255.0
-    elif len(image.shape) == 2 and image.dtype == np.uint8:
-        image = image.astype(np.float64) / 255.0
-    else:
-        assert len(image.shape) == 2
-        assert image.dtype == np.float64
-
-    return image
 
 
 def polar(
