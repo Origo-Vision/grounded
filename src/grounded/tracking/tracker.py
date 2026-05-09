@@ -111,8 +111,14 @@ class Tracker:
         )
         print(f"offset={offset}, psr={psr:.2f}")
 
+        # Warp the image to neutralize the translation.
+        global_translation_warped_image = transform.translate(
+            global_rotation_warped_image, xy=-offset
+        )
+
         if self._debug:
             qry.set_global_translation_corr(np.clip(corr_map, 0.0, 1.0))
+            qry.set_global_translation_warped_image(global_translation_warped_image)
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]

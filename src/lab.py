@@ -34,42 +34,47 @@ def main(options: argparse.Namespace) -> int:
     plt.figure(figsize=(20, 12))
 
     # Reference images.
-    plt.subplot(3, 3, 1)
+    plt.subplot(3, 4, 1)
     plt.imshow(ref._image, cmap="gray")
     plt.axis("off")
     plt.title("Ref image")
 
-    plt.subplot(3, 3, 2)
+    plt.subplot(3, 4, 2)
     plt.imshow(ref._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Ref spectrum")
 
     # Query images.
-    plt.subplot(3, 3, 4)
+    plt.subplot(3, 4, 5)
     plt.imshow(qry._image, cmap="gray")
     plt.axis("off")
     plt.title("Qry image")
 
-    plt.subplot(3, 3, 5)
+    plt.subplot(3, 4, 6)
     plt.imshow(qry._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Qry spectrum")
 
     # Tracking results.
-    plt.subplot(3, 3, 7)
+    plt.subplot(3, 4, 9)
     plt.imshow(qry._global_rotation_corr, cmap="gray")
     plt.axis("off")
     plt.title("Global rotation corr")
 
-    plt.subplot(3, 3, 8)
+    plt.subplot(3, 4, 10)
     plt.imshow(qry._global_rotation_warped_image, cmap="gray")
     plt.axis("off")
     plt.title("Global rotation warped")
 
-    plt.subplot(3, 3, 9)
+    plt.subplot(3, 4, 11)
     plt.imshow(qry._global_translation_corr, cmap="gray")
     plt.axis("off")
     plt.title("Global translation corr")
+
+    plt.subplot(3, 4, 12)
+    plt.imshow(qry._global_translation_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Global translation warped")
 
     plt.tight_layout()
     plt.show()
