@@ -40,11 +40,6 @@ def main(options: argparse.Namespace) -> int:
     plt.title("Ref image")
 
     plt.subplot(3, 3, 2)
-    plt.imshow(ref._normalized_filtered_image, cmap="gray")
-    plt.axis("off")
-    plt.title("Ref filtered")
-
-    plt.subplot(3, 3, 3)
     plt.imshow(ref._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Ref spectrum")
@@ -56,11 +51,6 @@ def main(options: argparse.Namespace) -> int:
     plt.title("Qry image")
 
     plt.subplot(3, 3, 5)
-    plt.imshow(qry._normalized_filtered_image, cmap="gray")
-    plt.axis("off")
-    plt.title("Qry filtered")
-
-    plt.subplot(3, 3, 6)
     plt.imshow(qry._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Qry spectrum")
@@ -75,6 +65,11 @@ def main(options: argparse.Namespace) -> int:
     plt.imshow(qry._global_rotation_warped_image, cmap="gray")
     plt.axis("off")
     plt.title("Global rotation warped")
+
+    plt.subplot(3, 3, 9)
+    plt.imshow(qry._global_translation_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Global translation corr")
 
     plt.tight_layout()
     plt.show()

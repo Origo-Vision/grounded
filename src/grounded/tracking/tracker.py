@@ -65,6 +65,7 @@ class Tracker:
             raise ValueError("Expecting an 8-bit grayscale, of the specified shape")
 
         normalized_filtered_image = image_utils.normalized(image) * self._image_window
+        image_fft = np.fft.rfft2(normalized_filtered_image)
         spectrum = self._create_spectrum(normalized_filtered_image)
         polar_spectrum_fft = np.fft.rfft2(
             self._polar_warp(spectrum) * self._polar_window
@@ -72,7 +73,7 @@ class Tracker:
 
         frame = Frame(
             image=image,
-            normalized_filtered_image=normalized_filtered_image,
+            image_fft=image_fft,
             polar_spectrum_fft=polar_spectrum_fft,
         )
 
@@ -90,14 +91,28 @@ class Tracker:
             qry: The query frame.
         """
         # Find the global rotation.
-        theta, psr = self._find_global_rotation(ref, qry)
+        corr_map, theta, psr = self._find_global_rotation(ref, qry)
         print(f"theta={theta:.2f}, psr={psr:.2f}")
 
         # Warp the query image to neutralize the rotation.
         global_rotation_warped_image = transform.rotate(qry._image, theta=-theta)
 
         if self._debug:
+            qry.set_global_rotation_corr(np.clip(corr_map, 0.0, 1.0))
             qry.set_global_rotation_warped_image(global_rotation_warped_image)
+
+        # Find the global translation.
+        corr_map, offset, psr = self._correlate(
+            ref_fft=ref._image_fft,
+            qry_fft=np.fft.rfft2(
+                image_utils.normalized(global_rotation_warped_image)
+                * self._image_window
+            ),
+        )
+        print(f"offset={offset}, psr={psr:.2f}")
+
+        if self._debug:
+            qry.set_global_translation_corr(np.clip(corr_map, 0.0, 1.0))
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]
@@ -125,18 +140,15 @@ class Tracker:
 
     def _find_global_rotation(
         self: Tracker, ref: Frame, qry: Frame
-    ) -> tuple[float, float]:
-        corr_map, t, psr = self._correlate(
+    ) -> tuple[NDArray[np.float64], float, float]:
+        corr_map, offset, psr = self._correlate(
             ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
         )
 
-        _, yt = t
+        _, yt = offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
 
-        if self._debug:
-            qry.set_global_rotation_corr(np.clip(corr_map, 0.0, 1.0))
-
-        return theta, psr
+        return corr_map, theta, psr
 
     def _correlate(
         self: Tracker, ref_fft: NDArray[np.complex128], qry_fft: NDArray[np.complex128]
@@ -151,8 +163,8 @@ class Tracker:
         xy, _ = heatmap.peak_location(heatmap=corr_map)
 
         h, w = corr_map.shape
-        t = xy - (w / 2.0, h / 2.0)
+        offset = xy - (w / 2.0, h / 2.0)
 
         psr = heatmap.peak_sidelobe_ratio(heatmap=corr_map, xy=xy)
 
-        return corr_map, t, psr
+        return corr_map, offset, psr
