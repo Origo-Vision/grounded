@@ -7,35 +7,6 @@ from numpy.typing import ArrayLike, NDArray
 import grounded.math.matrix as matrix
 
 
-
-
-def polar(
-    image: NDArray[np.float64], polar_height: int, polar_width: int
-) -> NDArray[np.float64]:
-    """
-    Perform image warp to log polar shape.
-
-    Parameters:
-        image: The image (single channel, float32 is expected.)
-        polar_height: The expected height of the polar image.
-        polar_width: The expected width of the polar image.
-
-    Returns:
-        The log polar image.
-    """
-    h, w = image.shape
-    return cast(
-        NDArray[np.float64],
-        cv.warpPolar(
-            image,
-            dsize=(polar_width, polar_height),
-            center=(w / 2.0, h / 2.0),
-            maxRadius=min(w / 2.0, h / 2.0),
-            flags=cv.INTER_LINEAR + cv.WARP_FILL_OUTLIERS,
-        ),
-    )
-
-
 def rotate(image: NDArray[np.uint8], theta: float) -> NDArray[np.uint8]:
     """
     Rotate an image by theta degrees.
