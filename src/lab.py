@@ -19,7 +19,7 @@ def main(options: argparse.Namespace) -> int:
 
     # Get the query image.
     if options.query is not None:
-        qry_image = dataset[options.reference]
+        qry_image = dataset[options.query]
     else:
         qry_image = transform.translate(ref_image, xy=(options.xt, options.yt))
         qry_image = transform.rotate(qry_image, theta=options.theta)
