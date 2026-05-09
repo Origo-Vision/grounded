@@ -8,6 +8,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 import grounded.image.heatmap as heatmap
+import grounded.image.transform as transform
 import grounded.image.utils as image_utils
 import grounded.math.utils as math_utils
 from grounded.tracking.frame import Frame
@@ -16,7 +17,7 @@ from grounded.tracking.frame import Frame
 class Tracker:
     """
     Visual tracker class. Works on square images, where sides shall be
-    power of two.
+    power of two. Assuming to work in a homographic scene.
     """
 
     def __init__(self: Tracker, size: int, debug: bool = False) -> None:
@@ -88,10 +89,15 @@ class Tracker:
             ref: The reference frame.
             qry: The query frame.
         """
-        # Find the global 
+        # Find the global rotation.
         theta, psr = self._find_global_rotation(ref, qry)
-
         print(f"theta={theta:.2f}, psr={psr:.2f}")
+
+        # Warp the query image to neutralize the rotation.
+        global_rotation_warped_image = transform.rotate(qry._image, theta=-theta)
+
+        if self._debug:
+            qry.set_global_rotation_warped_image(global_rotation_warped_image)
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]

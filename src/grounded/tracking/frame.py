@@ -23,6 +23,7 @@ class Frame:
         # Optional fields, set to a value when tracker is in debug mode.
         self._spectrum: NDArray[np.float64] | None = None
         self._global_rotation_corr: NDArray[np.float64] | None = None
+        self._global_rotation_warped_image: NDArray[np.uint8] | None = None
 
     def set_spectrum(self: Frame, spectrum: NDArray[np.float64]) -> None:
         self._spectrum = spectrum
@@ -31,3 +32,8 @@ class Frame:
         self: Frame, global_rotation_corr: NDArray[np.float64]
     ) -> None:
         self._global_rotation_corr = global_rotation_corr
+
+    def set_global_rotation_warped_image(
+        self: Frame, global_rotation_warped_image: NDArray[np.uint8]
+    ) -> None:
+        self._global_rotation_warped_image = global_rotation_warped_image

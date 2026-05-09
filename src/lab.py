@@ -71,6 +71,11 @@ def main(options: argparse.Namespace) -> int:
     plt.axis("off")
     plt.title("Global rotation corr")
 
+    plt.subplot(3, 3, 8)
+    plt.imshow(qry._global_rotation_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Global rotation warped")
+
     plt.tight_layout()
     plt.show()
 
