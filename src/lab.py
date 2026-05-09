@@ -28,39 +28,48 @@ def main(options: argparse.Namespace) -> int:
     ref = tracker.new_frame(image=ref_image)
     qry = tracker.new_frame(image=qry_image)
 
+    # Track the query relative to the reference.
+    tracker.track_frame(ref=ref, qry=qry)
+
     plt.figure(figsize=(20, 12))
 
     # Reference images.
-    plt.subplot(2, 3, 1)
+    plt.subplot(3, 3, 1)
     plt.imshow(ref._image, cmap="gray")
     plt.axis("off")
     plt.title("Ref image")
 
-    plt.subplot(2, 3, 2)
+    plt.subplot(3, 3, 2)
     plt.imshow(ref._normalized_filtered_image, cmap="gray")
     plt.axis("off")
     plt.title("Ref filtered")
 
-    plt.subplot(2, 3, 3)
+    plt.subplot(3, 3, 3)
     plt.imshow(ref._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Ref spectrum")
 
     # Query images.
-    plt.subplot(2, 3, 4)
+    plt.subplot(3, 3, 4)
     plt.imshow(qry._image, cmap="gray")
     plt.axis("off")
     plt.title("Qry image")
 
-    plt.subplot(2, 3, 5)
+    plt.subplot(3, 3, 5)
     plt.imshow(qry._normalized_filtered_image, cmap="gray")
     plt.axis("off")
     plt.title("Qry filtered")
 
-    plt.subplot(2, 3, 6)
+    plt.subplot(3, 3, 6)
     plt.imshow(qry._spectrum, cmap="gray")
     plt.axis("off")
     plt.title("Qry spectrum")
+
+    # Tracking results.
+    plt.subplot(3, 3, 7)
+    plt.imshow(qry._global_rotation_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Global rotation corr")
 
     plt.tight_layout()
     plt.show()

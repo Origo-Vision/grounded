@@ -41,6 +41,9 @@ class Tracker:
         self._image_window = image_utils.tukey_window(
             (self._image_height, self._image_width)
         )
+        self._polar_window = image_utils.tukey_window(
+            (self._polar_height, self._polar_width)
+        )
 
     def new_frame(self: Tracker, image: NDArray[np.uint8]) -> Frame:
         """
@@ -60,16 +63,23 @@ class Tracker:
 
         normalized_filtered_image = image_utils.normalized(image) * self._image_window
         spectrum = self._create_spectrum(normalized_filtered_image)
-        polar_spectrum_fft = np.fft.rfft2(self._polar_warp(spectrum))
+        polar_spectrum_fft = np.fft.rfft2(
+            self._polar_warp(spectrum) * self._polar_window
+        )
 
         frame = Frame(
             image=image,
             normalized_filtered_image=normalized_filtered_image,
             polar_spectrum_fft=polar_spectrum_fft,
-            spectrum=spectrum if self._debug else None,
         )
 
+        if self._debug:
+            frame.set_spectrum(spectrum)
+
         return frame
+
+    def track_frame(self: Tracker, ref: Frame, qry: Frame) -> None:
+        self._find_global_rotation(ref, qry)
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]
@@ -94,3 +104,21 @@ class Tracker:
         polar[:, -self._rmax :] = 0.0
 
         return cast(NDArray[np.float64], polar)
+
+    def _find_global_rotation(self: Tracker, ref: Frame, qry: Frame) -> None:
+        corr = self._correlate(
+            ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
+        )
+        if self._debug:
+            qry.set_global_rotation_corr(np.clip(corr, 0.0, 1.0))
+
+    def _correlate(
+        self: Tracker, ref_fft: NDArray[np.complex128], qry_fft: NDArray[np.complex128]
+    ) -> NDArray[np.float64]:
+        cps = qry_fft * np.conj(ref_fft)
+
+        cps[0].real = 0.0
+        cps[0].imag = 0.0
+        cps[1:] /= np.abs(cps[1:]) + 1e-15
+
+        return np.fft.fftshift(np.fft.irfft2(cps))

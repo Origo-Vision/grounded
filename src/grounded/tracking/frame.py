@@ -12,7 +12,6 @@ class Frame:
         image: NDArray[np.uint8],
         normalized_filtered_image: NDArray[np.float64],
         polar_spectrum_fft: NDArray[np.complex128],
-        spectrum: NDArray[np.float64] | None = None,
     ) -> None:
         self._id = Frame.next_id
         Frame.next_id += 1
@@ -21,5 +20,14 @@ class Frame:
         self._normalized_filtered_image = normalized_filtered_image
         self._polar_spectrum_fft = polar_spectrum_fft
 
-        # Optional fields, set to a value when tracker is in debug mode.s
+        # Optional fields, set to a value when tracker is in debug mode.
+        self._spectrum: NDArray[np.float64] | None = None
+        self._global_rotation_corr: NDArray[np.float64] | None = None
+
+    def set_spectrum(self: Frame, spectrum: NDArray[np.float64]) -> None:
         self._spectrum = spectrum
+
+    def set_global_rotation_corr(
+        self: Frame, global_rotation_corr: NDArray[np.float64]
+    ) -> None:
+        self._global_rotation_corr = global_rotation_corr
