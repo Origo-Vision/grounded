@@ -7,7 +7,9 @@ import cv2 as cv
 import numpy as np
 from numpy.typing import NDArray
 
+import grounded.image.heatmap as heatmap
 import grounded.image.utils as image_utils
+import grounded.math.utils as math_utils
 from grounded.tracking.frame import Frame
 
 
@@ -79,7 +81,17 @@ class Tracker:
         return frame
 
     def track_frame(self: Tracker, ref: Frame, qry: Frame) -> None:
-        self._find_global_rotation(ref, qry)
+        """
+        Track the query frame relative to the reference frame.
+
+        Parameters:
+            ref: The reference frame.
+            qry: The query frame.
+        """
+        # Find the global 
+        theta, psr = self._find_global_rotation(ref, qry)
+
+        print(f"theta={theta:.2f}, psr={psr:.2f}")
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]
@@ -105,20 +117,36 @@ class Tracker:
 
         return cast(NDArray[np.float64], polar)
 
-    def _find_global_rotation(self: Tracker, ref: Frame, qry: Frame) -> None:
-        corr = self._correlate(
+    def _find_global_rotation(
+        self: Tracker, ref: Frame, qry: Frame
+    ) -> tuple[float, float]:
+        corr_map, t, psr = self._correlate(
             ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
         )
+
+        _, yt = t
+        theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
+
         if self._debug:
-            qry.set_global_rotation_corr(np.clip(corr, 0.0, 1.0))
+            qry.set_global_rotation_corr(np.clip(corr_map, 0.0, 1.0))
+
+        return theta, psr
 
     def _correlate(
         self: Tracker, ref_fft: NDArray[np.complex128], qry_fft: NDArray[np.complex128]
-    ) -> NDArray[np.float64]:
+    ) -> tuple[NDArray[np.float64], NDArray[np.float64], float]:
         cps = qry_fft * np.conj(ref_fft)
 
         cps[0].real = 0.0
         cps[0].imag = 0.0
         cps[1:] /= np.abs(cps[1:]) + 1e-15
 
-        return np.fft.fftshift(np.fft.irfft2(cps))
+        corr_map = np.fft.fftshift(np.fft.irfft2(cps))
+        xy, _ = heatmap.peak_location(heatmap=corr_map)
+
+        h, w = corr_map.shape
+        t = xy - (w / 2.0, h / 2.0)
+
+        psr = heatmap.peak_sidelobe_ratio(heatmap=corr_map, xy=xy)
+
+        return corr_map, t, psr
