@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from typing import cast
 
 import cv2 as cv
@@ -11,7 +12,22 @@ from grounded.tracking.frame import Frame
 
 
 class Tracker:
+    """
+    Visual tracker class. Works on square images, where sides shall be
+    power of two.
+    """
+
     def __init__(self: Tracker, size: int, debug: bool = False) -> None:
+        """
+        Construct the tracker.
+
+        Parameters:
+            size: The side of the square image (shall be power of two).
+            debug: Debug flag. When set, a lot more data is stored into frames.
+        """
+        if not math.log2(size).is_integer():
+            raise ValueError("Size must be power of two")
+
         self._image_height = size
         self._image_width = size
         self._polar_height = 360
@@ -27,6 +43,15 @@ class Tracker:
         )
 
     def new_frame(self: Tracker, image: NDArray[np.uint8]) -> Frame:
+        """
+        Create a new Frame object.
+
+        Parameters:
+            image: The input input (assumes reshaped, grayscale image).
+
+        Returns:
+            The Frame object.
+        """
         if (
             image.shape != (self._image_height, self._image_width)
             and image.dtype != np.uint8
