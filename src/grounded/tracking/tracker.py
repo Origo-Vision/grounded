@@ -103,18 +103,14 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-
         print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
 
-        # Compensate for the rotation.
-        R = matrix.rotate_center_translate(
-            theta=-theta, xy=(0.0, 0.0), size=(self._image_width, self._image_height)
-        )
-        coarse_rotation_warped = cv.warpAffine(
-            qry._image, M=R[:2], dsize=(self._image_width, self._image_height)
+        # Rectify the query image with regards to the rotation.
+        coarse_rotation_warped = transform.warp_affine(
+            qry._image, theta=-theta, xt=0.0, yt=0.0
         )
 
-        # Find the global translation.
+        # Find the global translation using the rectified image.
         coarse_translation_corr, translation_offset, translation_psr = self._correlate(
             ref_fft=ref._image_fft,
             qry_fft=np.fft.rfft2(
@@ -122,28 +118,27 @@ class Tracker:
             ),
         )
 
-        # Rotate the translation offset as the identified offset represents Rinv @ t.
-        translation_offset = matrix.rotate(theta) @ (
-            translation_offset[0],
-            translation_offset[1],
-            0.0,
-        )
+        # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
+        # to get the true translation.
+        xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
+        print(f"coarse xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
-        x, y, _ = translation_offset
-
-        print(f"coarse x={x:.2f}, y={y:.2f}, psr={translation_psr:.2f}")
-
-        # Create the affine matrix.
-        M = matrix.rotate_center_translate(
+        # Create the forward (ref => qry) affine matrix.
+        M = matrix.affine(
             theta=theta,
-            xy=translation_offset[:2],
-            size=(self._image_width, self._image_width),
+            xt=xt,
+            yt=yt,
+            cx=(self._image_width - 1) * 0.5,
+            cy=(self._image_height - 1) * 0.5,
         )
-        Minv = np.linalg.inv(M)
 
-        h, w = qry._image.shape
+        # Get the reverse (qry => ref) affine matrix for warping.
+        Minv = np.linalg.inv(M)
         coarse_warped_image = cast(
-            NDArray[np.uint8], cv.warpAffine(qry._image, M=Minv[:2], dsize=(w, h))
+            NDArray[np.uint8],
+            cv.warpAffine(
+                qry._image, M=Minv[:2], dsize=(self._image_width, self._image_height)
+            ),
         )
 
         if self._debug:

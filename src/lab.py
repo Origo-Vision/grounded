@@ -6,7 +6,6 @@ import cv2 as cv
 from matplotlib import pyplot as plt
 
 from grounded.dataset import Dataset
-import grounded.math.matrix as matrix
 import grounded.image.transform as transform
 from grounded.tracking.tracker import Tracker
 
@@ -22,16 +21,8 @@ def main(options: argparse.Namespace) -> int:
     if options.query is not None:
         qry_image = dataset[options.query]
     else:
-        # qry_image = transform.translate(ref_image, xy=(options.xt, options.yt))
-        # qry_image = transform.rotate(qry_image, theta=options.theta)
-
-        M = matrix.rotate_center_translate(
-            theta=options.theta,
-            xy=(options.xt, options.yt),
-            size=(options.size, options.size),
-        )
-        qry_image = cv.warpAffine(
-            ref_image, M=M[:2], dsize=(options.size, options.size)
+        qry_image = transform.warp_affine(
+            ref_image, theta=options.theta, xt=options.xt, yt=options.yt
         )
 
     # Get the frames.

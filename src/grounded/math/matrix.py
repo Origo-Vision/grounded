@@ -4,7 +4,7 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 
-def translate(xy: ArrayLike) -> NDArray[np.float64]:
+def translate(xt: float, yt: float) -> NDArray[np.float64]:
     """
     Create a translate matrix.
 
@@ -14,8 +14,7 @@ def translate(xy: ArrayLike) -> NDArray[np.float64]:
     Returns:
         The translate matrix.
     """
-    x, y = np.array(xy)
-    return np.array([[1.0, 0.0, x], [0.0, 1.0, y], [0.0, 0.0, 1.0]])
+    return np.array([[1.0, 0.0, xt], [0.0, 1.0, yt], [0.0, 0.0, 1.0]])
 
 
 def rotate(theta: float) -> NDArray[np.float64]:
@@ -35,7 +34,17 @@ def rotate(theta: float) -> NDArray[np.float64]:
     return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
 
-def rotate_center_translate(
+def affine(
+    theta: float, xt: float, yt: float, cx: float, cy: float
+) -> NDArray[np.float64]:
+    return (
+        translate(xt=cx + xt, yt=cy + yt)
+        @ rotate(theta=theta)
+        @ translate(xt=-cx, yt=-cy)
+    )
+
+
+def rotate_translate(
     theta: float, xy: ArrayLike, size: ArrayLike
 ) -> NDArray[np.float64]:
     center = np.array(size) / 2.0
