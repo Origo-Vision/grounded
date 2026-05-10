@@ -35,6 +35,14 @@ def rotate(theta: float) -> NDArray[np.float64]:
     return np.array([[c, -s, 0.0], [s, c, 0.0], [0.0, 0.0, 1.0]])
 
 
+def rotate_center_translate(
+    theta: float, xy: ArrayLike, size: ArrayLike
+) -> NDArray[np.float64]:
+    center = np.array(size) / 2.0
+
+    return translate(center + np.array(xy)) @ rotate(theta) @ translate(-center)
+
+
 def translate_rotate(xy: ArrayLike, theta: float) -> NDArray[np.float64]:
     """
     Create an affine matrix with translation and rotation (rotation is applied first).

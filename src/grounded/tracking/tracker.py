@@ -107,7 +107,12 @@ class Tracker:
         print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Compensate for the rotation.
-        coarse_rotation_warped = transform.rotate(qry._image, theta=-theta)
+        R = matrix.rotate_center_translate(
+            theta=-theta, xy=(0.0, 0.0), size=(self._image_width, self._image_height)
+        )
+        coarse_rotation_warped = cv.warpAffine(
+            qry._image, M=R[:2], dsize=(self._image_width, self._image_height)
+        )
 
         # Find the global translation.
         coarse_translation_corr, translation_offset, translation_psr = self._correlate(
@@ -116,17 +121,29 @@ class Tracker:
                 image_utils.normalized(coarse_rotation_warped) * self._image_window
             ),
         )
-        x, y = translation_offset
+
+        # Rotate the translation offset as the identified offset represents Rinv @ t.
+        translation_offset = matrix.rotate(theta) @ (
+            translation_offset[0],
+            translation_offset[1],
+            0.0,
+        )
+
+        x, y, _ = translation_offset
 
         print(f"coarse x={x:.2f}, y={y:.2f}, psr={translation_psr:.2f}")
 
         # Create the affine matrix.
-        M = matrix.translate_rotate(xy=-translation_offset, theta=-theta)
-        # Minv = np.linalg.inv(M)
+        M = matrix.rotate_center_translate(
+            theta=theta,
+            xy=translation_offset[:2],
+            size=(self._image_width, self._image_width),
+        )
+        Minv = np.linalg.inv(M)
 
         h, w = qry._image.shape
         coarse_warped_image = cast(
-            NDArray[np.uint8], cv.warpAffine(qry._image, M=M[:2], dsize=(w, h))
+            NDArray[np.uint8], cv.warpAffine(qry._image, M=Minv[:2], dsize=(w, h))
         )
 
         if self._debug:
