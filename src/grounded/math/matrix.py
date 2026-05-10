@@ -37,33 +37,23 @@ def rotate(theta: float) -> NDArray[np.float64]:
 def affine(
     theta: float, xt: float, yt: float, cx: float, cy: float
 ) -> NDArray[np.float64]:
+    """
+    Create an affine matrix, for the given parameters.
+
+    theta: The rotation around image center, in degrees.
+        xt: X direction translation.
+        yt: Y direction translation.
+        cx: X coordinate to rotate around.
+        cy: Y coordinate to rotate around.
+
+    Returns:
+        The affine matrix.
+    """
     return (
         translate(xt=cx + xt, yt=cy + yt)
         @ rotate(theta=theta)
         @ translate(xt=-cx, yt=-cy)
     )
-
-
-def rotate_translate(
-    theta: float, xy: ArrayLike, size: ArrayLike
-) -> NDArray[np.float64]:
-    center = np.array(size) / 2.0
-
-    return translate(center + np.array(xy)) @ rotate(theta) @ translate(-center)
-
-
-def translate_rotate(xy: ArrayLike, theta: float) -> NDArray[np.float64]:
-    """
-    Create an affine matrix with translation and rotation (rotation is applied first).
-
-    Parameters:
-        xy: The vector of translation.
-        theta: The rotation angle in degrees.
-
-    Returns:
-        The rotation matrix.
-    """
-    return translate(xy) @ rotate(theta)
 
 
 def decomp_affine(M: NDArray[np.float64]) -> tuple[NDArray[np.float64], float]:
