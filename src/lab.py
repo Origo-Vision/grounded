@@ -58,19 +58,19 @@ def main(options: argparse.Namespace) -> int:
 
     # Coarse registration images.
     plt.subplot(4, 3, 7)
+    plt.imshow(qry._coarse_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Coarse warped image")
+
+    plt.subplot(4, 3, 8)
     plt.imshow(qry._coarse_rotation_corr, cmap="gray")
     plt.axis("off")
     plt.title("Coarse rotation corr")
 
-    plt.subplot(4, 3, 8)
+    plt.subplot(4, 3, 9)
     plt.imshow(qry._coarse_translation_corr, cmap="gray")
     plt.axis("off")
     plt.title("Coarse translation corr")
-
-    plt.subplot(4, 3, 9)
-    plt.imshow(qry._coarse_warped_image, cmap="gray")
-    plt.axis("off")
-    plt.title("Coarse warped image")
 
     plt.tight_layout()
     plt.show()
