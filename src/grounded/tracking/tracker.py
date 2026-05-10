@@ -10,6 +10,7 @@ from numpy.typing import NDArray
 import grounded.image.heatmap as heatmap
 import grounded.image.transform as transform
 import grounded.image.utils as image_utils
+import grounded.math.matrix as matrix
 import grounded.math.utils as math_utils
 from grounded.tracking.frame import Frame
 
@@ -90,35 +91,50 @@ class Tracker:
             ref: The reference frame.
             qry: The query frame.
         """
+        A, coarse_warped_image = self._coarse_registration(ref=ref, qry=qry)
+
+    def _coarse_registration(
+        self: Tracker, ref: Frame, qry: Frame
+    ) -> tuple[NDArray[np.float64], NDArray[np.uint8]]:
         # Find the global rotation.
-        corr_map, theta, psr = self._find_global_rotation(ref, qry)
-        print(f"theta={theta:.2f}, psr={psr:.2f}")
+        coarse_rotation_corr, rotation_offset, rotation_psr = self._correlate(
+            ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
+        )
 
-        # Warp the query image to neutralize the rotation.
-        global_rotation_warped_image = transform.rotate(qry._image, theta=-theta)
+        _, yt = rotation_offset
+        theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
 
-        if self._debug:
-            qry.set_global_rotation_corr(np.clip(corr_map, 0.0, 1.0))
-            qry.set_global_rotation_warped_image(global_rotation_warped_image)
+        print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
+
+        # Compensate for the rotation.
+        coarse_rotation_warped = transform.rotate(qry._image, theta=-theta)
 
         # Find the global translation.
-        corr_map, offset, psr = self._correlate(
+        coarse_translation_corr, translation_offset, translation_psr = self._correlate(
             ref_fft=ref._image_fft,
             qry_fft=np.fft.rfft2(
-                image_utils.normalized(global_rotation_warped_image)
-                * self._image_window
+                image_utils.normalized(coarse_rotation_warped) * self._image_window
             ),
         )
-        print(f"offset={offset}, psr={psr:.2f}")
+        x, y = translation_offset
 
-        # Warp the image to neutralize the translation.
-        global_translation_warped_image = transform.translate(
-            global_rotation_warped_image, xy=-offset
+        print(f"coarse x={x:.2f}, y={y:.2f}, psr={translation_psr:.2f}")
+
+        # Create the affine matrix.
+        M = matrix.translate_rotate(xy=-translation_offset, theta=-theta)
+        # Minv = np.linalg.inv(M)
+
+        h, w = qry._image.shape
+        coarse_warped_image = cast(
+            NDArray[np.uint8], cv.warpAffine(qry._image, M=M[:2], dsize=(w, h))
         )
 
         if self._debug:
-            qry.set_global_translation_corr(np.clip(corr_map, 0.0, 1.0))
-            qry.set_global_translation_warped_image(global_translation_warped_image)
+            qry.set_coarse_rotation_corr(np.clip(coarse_rotation_corr, 0.0, 1.0))
+            qry.set_coarse_translation_corr(np.clip(coarse_translation_corr, 0.0, 1.0))
+            qry.set_coarse_warped_image(coarse_warped_image)
+
+        return M, coarse_warped_image
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]
@@ -143,18 +159,6 @@ class Tracker:
         polar[:, -self._rmax :] = 0.0
 
         return cast(NDArray[np.float64], polar)
-
-    def _find_global_rotation(
-        self: Tracker, ref: Frame, qry: Frame
-    ) -> tuple[NDArray[np.float64], float, float]:
-        corr_map, offset, psr = self._correlate(
-            ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
-        )
-
-        _, yt = offset
-        theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-
-        return corr_map, theta, psr
 
     def _correlate(
         self: Tracker, ref_fft: NDArray[np.complex128], qry_fft: NDArray[np.complex128]

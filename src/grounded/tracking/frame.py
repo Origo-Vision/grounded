@@ -22,30 +22,24 @@ class Frame:
 
         # Optional fields, set to a value when tracker is in debug mode.
         self._spectrum: NDArray[np.float64] | None = None
-        self._global_rotation_corr: NDArray[np.float64] | None = None
-        self._global_rotation_warped_image: NDArray[np.uint8] | None = None
-        self._global_translation_corr: NDArray[np.float64] | None = None
-        self._global_translation_warped_image: NDArray[np.uint8] | None = None
+        self._coarse_rotation_corr: NDArray[np.float64] | None = None
+        self._coarse_translation_corr: NDArray[np.float64] | None = None
+        self._coarse_warped_image: NDArray[np.uint8] | None = None
 
     def set_spectrum(self: Frame, spectrum: NDArray[np.float64]) -> None:
         self._spectrum = spectrum
 
-    def set_global_rotation_corr(
-        self: Frame, global_rotation_corr: NDArray[np.float64]
+    def set_coarse_rotation_corr(
+        self: Frame, coarse_rotation_corr: NDArray[np.float64]
     ) -> None:
-        self._global_rotation_corr = global_rotation_corr
+        self._coarse_rotation_corr = coarse_rotation_corr
 
-    def set_global_rotation_warped_image(
-        self: Frame, global_rotation_warped_image: NDArray[np.uint8]
+    def set_coarse_translation_corr(
+        self: Frame, coarse_translation_corr: NDArray[np.float64]
     ) -> None:
-        self._global_rotation_warped_image = global_rotation_warped_image
+        self._coarse_translation_corr = coarse_translation_corr
 
-    def set_global_translation_corr(
-        self: Frame, global_translation_corr: NDArray[np.float64]
+    def set_coarse_warped_image(
+        self: Frame, coarse_warped_image: NDArray[np.uint8]
     ) -> None:
-        self._global_translation_corr = global_translation_corr
-
-    def set_global_translation_warped_image(
-        self: Frame, global_translation_warped_image: NDArray[np.uint8]
-    ) -> None:
-        self._global_translation_warped_image = global_translation_warped_image
+        self._coarse_warped_image = coarse_warped_image
