@@ -16,11 +16,13 @@ class Frame:
         self._id = Frame.next_id
         Frame.next_id += 1
 
+        self._H = np.eye(3)
+
         self._image = image
         self._image_fft = image_fft
         self._polar_spectrum_fft = polar_spectrum_fft
 
-        # Optional fields, set to a value when tracker is in debug mode.
+        # Optional fields, set to a value when the tracker is in debug mode.
         self._spectrum: NDArray[np.float64] | None = None
         self._coarse_rotation_corr: NDArray[np.float64] | None = None
         self._coarse_translation_corr: NDArray[np.float64] | None = None

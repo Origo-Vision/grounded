@@ -91,7 +91,11 @@ class Tracker:
             ref: The reference frame.
             qry: The query frame.
         """
+        # Perform an FMT-style coarse image registration.
         A, coarse_warped_image = self._coarse_registration(ref=ref, qry=qry)
+
+        # Use the forward matrix to set a pose for the query frame.
+        qry._H = A @ ref._H
 
     def _coarse_registration(
         self: Tracker, ref: Frame, qry: Frame
