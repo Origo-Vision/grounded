@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 from grounded.dataset import Dataset
 import grounded.image.transform as transform
+import grounded.tracking.stitching as stitching
 from grounded.tracking.tracker import Tracker
 
 
@@ -32,6 +33,16 @@ def main(options: argparse.Namespace) -> int:
     # Track the query relative to the reference.
     tracker.track_frame(ref=ref, qry=qry)
 
+    # Stitch the frames to a map
+    map = stitching.stitch_frames(frames=[ref, qry])
+
+    if map is not None:
+        plt.figure(figsize=(20, 12))
+        plt.imshow(map, cmap="gray")
+        plt.axis("off")
+        plt.title("Stitched map")
+
+    # Debug images.
     plt.figure(figsize=(20, 12))
 
     # Reference images.
@@ -60,7 +71,7 @@ def main(options: argparse.Namespace) -> int:
     plt.subplot(4, 3, 7)
     plt.imshow(qry._coarse_warped_image, cmap="gray")
     plt.axis("off")
-    plt.title("Coarse warped image")
+    plt.title("Coarse warped image (qry => ref)")
 
     plt.subplot(4, 3, 8)
     plt.imshow(qry._coarse_rotation_corr, cmap="gray")
