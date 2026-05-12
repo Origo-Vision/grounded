@@ -56,19 +56,25 @@ def affine(
     )
 
 
-def decomp_affine(M: NDArray[np.float64]) -> tuple[NDArray[np.float64], float]:
+def decomp_affine(
+    M: NDArray[np.float64], cx: float, cy: float
+) -> tuple[NDArray[np.float64], float]:
     """
     Decompose an affine matrix into translation and rotation.
 
     Parameters:
         M: The affine matrix.
+        cx: Center of image.
+        cy: Center of image.
 
     Returns:
-        Tuple with translation (xy), and rotation in degrees.
+        Tuple with translation vector (xy), and rotation in degrees.
     """
     if not (M.shape == (3, 3) or M.shape == (2, 3)):
         raise ValueError("Affine matrix expected to be 3x3 or 2x3")
 
-    theta = -math.atan2(M[0, 1], M[0, 0])
+    theta = math.atan2(M[1, 0], M[0, 0])
+    t = M[:2, 2]
+    t -= (np.eye(2) - M[:2, :2]) @ (cx, cy)
 
-    return M[:2, 2], math.degrees(theta)
+    return t, math.degrees(theta)

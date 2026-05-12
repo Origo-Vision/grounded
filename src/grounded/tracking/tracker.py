@@ -83,23 +83,31 @@ class Tracker:
 
         return frame
 
-    def track_frame(self: Tracker, ref: Frame, qry: Frame) -> None:
+    def track_frame(
+        self: Tracker, ref: Frame, qry: Frame
+    ) -> tuple[NDArray[np.float64], float]:
         """
         Track the query frame relative to the reference frame.
 
         Parameters:
             ref: The reference frame.
             qry: The query frame.
+
+        Returns:
+            Tuple affine forward matrix, and psr from coarse registration.
         """
         # Perform an FMT-style coarse image registration.
-        A, coarse_warped_image = self._coarse_registration(ref=ref, qry=qry)
+        A, coarse_warped_image, psr = self._coarse_registration(ref=ref, qry=qry)
 
         # Use the forward matrix to set a pose for the query frame.
         qry._H = A @ ref._H
 
+        # Return the affine matrix, and the translation psr.
+        return A, psr
+
     def _coarse_registration(
         self: Tracker, ref: Frame, qry: Frame
-    ) -> tuple[NDArray[np.float64], NDArray[np.uint8]]:
+    ) -> tuple[NDArray[np.float64], NDArray[np.uint8], float]:
         # Find the global rotation.
         coarse_rotation_corr, rotation_offset, rotation_psr = self._correlate(
             ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
@@ -107,7 +115,7 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         coarse_rotation_warped = transform.warp_affine(
@@ -125,7 +133,7 @@ class Tracker:
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
         # to get the true translation.
         xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
-        print(f"coarse xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+        # print(f"coarse xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
         # Create the forward (ref => qry) affine matrix.
         M = matrix.affine(
@@ -150,7 +158,7 @@ class Tracker:
             qry.set_coarse_translation_corr(np.clip(coarse_translation_corr, 0.0, 1.0))
             qry.set_coarse_warped_image(coarse_warped_image)
 
-        return M, coarse_warped_image
+        return M, coarse_warped_image, translation_psr
 
     def _create_spectrum(
         self: Tracker, normalized_filtered_image: NDArray[np.float64]

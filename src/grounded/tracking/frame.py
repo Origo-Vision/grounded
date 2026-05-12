@@ -28,6 +28,9 @@ class Frame:
         self._coarse_translation_corr: NDArray[np.float64] | None = None
         self._coarse_warped_image: NDArray[np.uint8] | None = None
 
+    def id(self: Frame) -> int:
+        return self._id
+
     def set_spectrum(self: Frame, spectrum: NDArray[np.float64]) -> None:
         self._spectrum = spectrum
 

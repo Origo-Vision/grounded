@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 
 from grounded.dataset import Dataset
 import grounded.image.transform as transform
+import grounded.math.matrix as matrix
 import grounded.tracking.stitching as stitching
 from grounded.tracking.tracker import Tracker
 
@@ -31,7 +32,13 @@ def main(options: argparse.Namespace) -> int:
     qry = tracker.new_frame(image=qry_image)
 
     # Track the query relative to the reference.
-    tracker.track_frame(ref=ref, qry=qry)
+    A, psr = tracker.track_frame(ref=ref, qry=qry)
+    xy, theta = matrix.decomp_affine(
+        M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
+    )
+    print(
+        f"> theta={theta:.2f}{chr(176)}, xt={xy[0]:.2f}px, yt={xy[1]:.2f}px, psr={psr:.2f}"
+    )
 
     # Stitch the frames to a map
     map = stitching.stitch_frames(frames=[ref, qry])
