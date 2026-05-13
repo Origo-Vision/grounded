@@ -8,13 +8,17 @@ import numpy as np
 from grounded.dataset import Dataset
 import grounded.math.matrix as matrix
 from grounded.tracking.tracker import Tracker
+from grounded.tracking.kcc_tracker import KCCTracker
 import grounded.tracking.stitching as stitching
 
 
 def main(options: argparse.Namespace) -> int:
-    image_size = 256
-    dataset = Dataset(options.datadir, shape=(image_size, image_size))
-    tracker = Tracker(size=image_size, debug=False)
+    dataset = Dataset(options.datadir, shape=(options.size, options.size))
+    tracker = (
+        KCCTracker(size=options.size, debug=True)
+        if options.kcc
+        else Tracker(size=options.size, debug=True)
+    )
 
     start = options.start
     end = (
@@ -36,7 +40,7 @@ def main(options: argparse.Namespace) -> int:
 
         A, psr = tracker.track_frame(ref=keyframes[-1], qry=frame)
         xy, theta = matrix.decomp_affine(
-            M=A, cx=(image_size - 1) * 0.5, cy=(image_size - 1) * 0.5
+            M=A, cx=(options.size- 1) * 0.5, cy=(options.size - 1) * 0.5
         )
         print(
             f" theta={theta:.2f}{chr(176)}, xt={xy[0]:.2f}px, yt={xy[1]:.2f}px, psr={psr:.2f}"
@@ -47,7 +51,7 @@ def main(options: argparse.Namespace) -> int:
         if (
             psr < options.thr_psr
             or theta > options.thr_theta
-            or dist >= image_size * options.thr_translate
+            or dist >= options.size * options.thr_translate
         ):
             print(f" frame #{frame.id()} is promoted to keyframe")
             keyframes.append(frame)
@@ -70,11 +74,15 @@ if __name__ == "__main__":
     )
     parser.add_argument("datadir", type=pathlib.Path, help="Path to dataset directory")
     parser.add_argument(
+        "--size", choices=[256, 512], default=256*2, help="The image size"
+    )
+    parser.add_argument(
         "--start", type=int, default=0, help="First image in the dataset"
     )
     parser.add_argument(
         "--num-items", type=int, default=None, help="The number of items to track"
     )
+    parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
     parser.add_argument("--thr-psr", type=float, default=6.0, help="PSR threshold")
     parser.add_argument(
         "--thr-translate",

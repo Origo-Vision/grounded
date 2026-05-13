@@ -10,11 +10,16 @@ import grounded.image.transform as transform
 import grounded.math.matrix as matrix
 import grounded.tracking.stitching as stitching
 from grounded.tracking.tracker import Tracker
+from grounded.tracking.kcc_tracker import KCCTracker
 
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = Tracker(size=options.size, debug=True)
+    tracker = (
+        KCCTracker(size=options.size, debug=True)
+        if options.kcc
+        else Tracker(size=options.size, debug=True)
+    )
 
     # Get the reference image.
     ref_image = dataset[options.reference]
@@ -33,6 +38,7 @@ def main(options: argparse.Namespace) -> int:
 
     # Track the query relative to the reference.
     A, psr = tracker.track_frame(ref=ref, qry=qry)
+
     xy, theta = matrix.decomp_affine(
         M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
     )
@@ -113,6 +119,7 @@ if __name__ == "__main__":
         default=None,
         help="The (optional) query index from the dataset",
     )
+    parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
     parser.add_argument(
         "--size", choices=(256, 512), default=256, help="The image size"
     )

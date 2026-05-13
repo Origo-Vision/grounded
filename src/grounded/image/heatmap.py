@@ -5,13 +5,14 @@ from numpy.typing import NDArray
 
 
 def gaussian_heatmap(
-    xy: NDArray[np.float64], shape: tuple[int, int], sigma: float = 1.0
+    x: float, y: float, shape: tuple[int, int], sigma: float = 1.0
 ) -> NDArray[np.float64]:
     """
     Create a single channel heatmap, with a single gaussian peak.
 
     Parameters:
-        xy: The image location of the peak.
+        x: The image x location of the peak.
+        y: The image y location of the peak.
         shape: The shape (height, width) of the heatmap.
 
     Returns:
@@ -20,7 +21,6 @@ def gaussian_heatmap(
     h, w = shape
     y_grid, x_grid = np.ogrid[0:h, 0:w]
 
-    x, y = xy
     return cast(
         NDArray[np.float64],
         np.exp(-((x_grid - x) ** 2 + (y_grid - y) ** 2) / (2.0 * sigma**2)),

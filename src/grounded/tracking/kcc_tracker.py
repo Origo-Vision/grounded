@@ -15,13 +15,17 @@ import grounded.math.utils as math_utils
 from grounded.tracking.frame import Frame
 
 
-class Tracker:
+class KCCTracker:
     """
-    Visual tracker class. Works on square images, where sides shall be
+    Visual, kernel based, tracker class. Works on square images, where sides shall be
     power of two. Assuming to work in a homographic scene.
     """
 
-    def __init__(self: Tracker, size: int, debug: bool = False) -> None:
+    def __init__(
+        self: KCCTracker,
+        size: int,
+        debug: bool = False,
+    ) -> None:
         """
         Construct the tracker.
 
@@ -38,10 +42,15 @@ class Tracker:
         self._polar_width = size // 2
         self._polar_center = (self._image_width / 2, self._image_height / 2)
         self._polar_max_radius = size / 2.0
+
+        self._kernel_offset = 0.1
+        self._kernel_power = 3.0
+        self._kernel_lambda = 0.1
         self._rmin = 5
         self._rmax = 5
 
         self._debug = debug
+
         self._image_window = image_utils.tukey_window(
             (self._image_height, self._image_width)
         )
@@ -49,7 +58,19 @@ class Tracker:
             (self._polar_height, self._polar_width)
         )
 
-    def new_frame(self: Tracker, image: NDArray[np.uint8]) -> Frame:
+        image_target = np.zeros(
+            (self._image_height, self._image_width), dtype=np.float32
+        )
+        image_target[self._image_height // 2, self._image_width // 2] = 1.0
+        self._image_target_fft = np.fft.rfft2(image_target)
+
+        polar_target = np.zeros(
+            (self._polar_height, self._polar_width), dtype=np.float32
+        )
+        polar_target[self._polar_height // 2, self._polar_width // 2] = 1.0
+        self._polar_target_fft = np.fft.rfft2(polar_target)
+
+    def new_frame(self: KCCTracker, image: NDArray[np.uint8]) -> Frame:
         """
         Create a new Frame object.
 
@@ -84,7 +105,7 @@ class Tracker:
         return frame
 
     def track_frame(
-        self: Tracker, ref: Frame, qry: Frame
+        self: KCCTracker, ref: Frame, qry: Frame
     ) -> tuple[NDArray[np.float64], float]:
         """
         Track the query frame relative to the reference frame.
@@ -96,7 +117,6 @@ class Tracker:
         Returns:
             Tuple affine forward matrix, and psr from coarse registration.
         """
-        # Perform an FMT-style coarse image registration.
         A, coarse_warped_image, psr = self._coarse_registration(ref=ref, qry=qry)
 
         # Use the forward matrix to set a pose for the query frame.
@@ -106,16 +126,20 @@ class Tracker:
         return A, psr
 
     def _coarse_registration(
-        self: Tracker, ref: Frame, qry: Frame
+        self: KCCTracker, ref: Frame, qry: Frame
     ) -> tuple[NDArray[np.float64], NDArray[np.uint8], float]:
         # Find the global rotation.
-        coarse_rotation_corr, rotation_offset, rotation_psr = self._correlate(
-            ref_fft=ref._polar_spectrum_fft, qry_fft=qry._polar_spectrum_fft
+        rotation_offset, rotation_psr, rotation_corr = (
+            self._calculate_kernel_correlation(
+                fft=qry._polar_spectrum_fft,
+                ref_fft=ref._polar_spectrum_fft,
+                target_fft=self._polar_target_fft,
+            )
         )
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         coarse_rotation_warped = transform.warp_affine(
@@ -123,11 +147,14 @@ class Tracker:
         )
 
         # Find the global translation using the rectified image.
-        coarse_translation_corr, translation_offset, translation_psr = self._correlate(
-            ref_fft=ref._image_fft,
-            qry_fft=np.fft.rfft2(
-                image_utils.normalized(coarse_rotation_warped) * self._image_window
-            ),
+        translation_offset, translation_psr, translation_corr = (
+            self._calculate_kernel_correlation(
+                fft=np.fft.rfft2(
+                    image_utils.normalized(coarse_rotation_warped) * self._image_window
+                ),
+                ref_fft=ref._image_fft,
+                target_fft=self._image_target_fft,
+            )
         )
 
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
@@ -154,21 +181,21 @@ class Tracker:
         )
 
         if self._debug:
-            qry.set_coarse_rotation_corr(np.clip(coarse_rotation_corr, 0.0, 1.0))
-            qry.set_coarse_translation_corr(np.clip(coarse_translation_corr, 0.0, 1.0))
+            qry.set_coarse_rotation_corr(np.clip(rotation_corr, 0.0, 1.0))
+            qry.set_coarse_translation_corr(np.clip(translation_corr, 0.0, 1.0))
             qry.set_coarse_warped_image(coarse_warped_image)
 
         return M, coarse_warped_image, translation_psr
 
     def _create_spectrum(
-        self: Tracker, normalized_filtered_image: NDArray[np.float64]
+        self: KCCTracker, normalized_filtered_image: NDArray[np.float64]
     ) -> NDArray[np.float64]:
         # For now, not using rfft. Use full transform for simplicity.
         spectrum = np.fft.fftshift(np.fft.fft2(normalized_filtered_image))
         return np.log1p(np.abs(spectrum))
 
     def _polar_warp(
-        self: Tracker, spectrum: NDArray[np.float64]
+        self: KCCTracker, spectrum: NDArray[np.float64]
     ) -> NDArray[np.float64]:
         polar = cv.warpPolar(
             spectrum,
@@ -184,21 +211,43 @@ class Tracker:
 
         return cast(NDArray[np.float64], polar)
 
-    def _correlate(
-        self: Tracker, ref_fft: NDArray[np.complex128], qry_fft: NDArray[np.complex128]
-    ) -> tuple[NDArray[np.float64], NDArray[np.float64], float]:
-        cps = qry_fft * np.conj(ref_fft)
+    def _calculate_kernel_correlation(
+        self: KCCTracker,
+        fft: NDArray[np.complex128],
+        ref_fft: NDArray[np.complex128],
+        target_fft: NDArray[np.complex128],
+    ) -> tuple[NDArray[np.float64], float, NDArray[np.float64]]:
+        assert fft.shape == ref_fft.shape
+        assert fft.shape == target_fft.shape
 
-        cps[0].real = 0.0
-        cps[0].imag = 0.0
-        cps[1:] /= np.abs(cps[1:]) + 1e-15
+        kzz = self._calculate_kernel(xf=ref_fft)
+        kxz = self._calculate_kernel(xf=fft, zf=ref_fft)
 
-        corr_map = np.fft.fftshift(np.fft.irfft2(cps))
-        xy, _ = heatmap.peak_location(heatmap=corr_map)
+        H = target_fft / (kzz + self._kernel_lambda)
+        G = H * kxz
 
-        h, w = corr_map.shape
-        offset = xy - (w / 2.0, h / 2.0)
+        g = np.fft.irfft2(G)
+        xy, response = heatmap.peak_location(heatmap=g)
+        psr = heatmap.peak_sidelobe_ratio(heatmap=g, xy=xy)
 
-        psr = heatmap.peak_sidelobe_ratio(heatmap=corr_map, xy=xy)
+        # Infer the image shape from the FFT.
+        h, w = fft.shape
+        w = (w - 1) * 2
 
-        return corr_map, offset, psr
+        translation = xy - [w / 2.0, h / 2.0]
+
+        return translation, psr, g
+
+    def _calculate_kernel(
+        self: KCCTracker,
+        xf: NDArray[np.complex128],
+        zf: NDArray[np.complex128] | None = None,
+    ) -> NDArray[np.complex128]:
+        zfc = np.conj(xf) if zf is None else np.conj(zf)
+        xzf = xf * zfc
+        xz = np.fft.irfft2(xzf)
+
+        kernel = np.pow(xz + self._kernel_offset, self._kernel_power)
+        kernel /= np.max(np.abs(kernel))
+
+        return np.fft.rfft2(kernel)
