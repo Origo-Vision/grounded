@@ -92,16 +92,20 @@ def main(options: argparse.Namespace) -> int:
     plt.title("Coarse translation corr")
 
     # Fine registration images.
-    if qry._fine_warped_image is not None:
-        plt.subplot(4, 3, 10)
-        plt.imshow(qry._fine_warped_image, cmap="gray")
-        plt.axis("off")
-        plt.title("Fine warped image (qry => ref)")
+    plt.subplot(4, 3, 10)
+    plt.imshow(qry._fine_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine warped image (qry => ref)")
+
+    plt.subplot(4, 3, 11)
+    plt.imshow(qry._fine_rotation_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine rotation corr")
 
     plt.subplot(4, 3, 12)
-    plt.imshow(qry._fine_corr, cmap="gray")
+    plt.imshow(qry._fine_translation_corr, cmap="gray")
     plt.axis("off")
-    plt.title("Fine corr")
+    plt.title("Fine translation corr")
 
     plt.tight_layout()
     plt.show()
@@ -128,7 +132,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
     parser.add_argument(
-        "--size", choices=(256, 512), default=256, help="The image size"
+        "--size", type=int, choices=(128, 256, 512), default=256, help="The image size"
     )
     parser.add_argument(
         "--theta", type=float, default=0.0, help="Rotation angle (degrees)"

@@ -69,7 +69,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("datadir", type=pathlib.Path, help="Path to dataset directory")
     parser.add_argument(
-        "--size", choices=[256, 512], default=256, help="The image size"
+        "--size", type=int, choices=(128, 256, 512), default=256, help="The image size"
     )
     parser.add_argument(
         "--start", type=int, default=0, help="First image in the dataset"

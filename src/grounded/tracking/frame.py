@@ -24,10 +24,13 @@ class Frame:
 
         # Optional fields, set to a value when the tracker is in debug mode.
         self._spectrum: NDArray[np.float64] | None = None
+
         self._coarse_rotation_corr: NDArray[np.float64] | None = None
         self._coarse_translation_corr: NDArray[np.float64] | None = None
         self._coarse_warped_image: NDArray[np.uint8] | None = None
-        self._fine_corr: NDArray[np.float64] | None = None
+
+        self._fine_rotation_corr: NDArray[np.float64] | None = None
+        self._fine_translation_corr: NDArray[np.float64] | None = None
         self._fine_warped_image: NDArray[np.uint8] | None = None
 
     def id(self: Frame) -> int:
@@ -51,8 +54,15 @@ class Frame:
     ) -> None:
         self._coarse_warped_image = coarse_warped_image
 
-    def set_fine_corr(self: Frame, fine_corr: NDArray[np.float64]) -> None:
-        self._fine_corr = fine_corr
+    def set_fine_rotation_corr(
+        self: Frame, fine_rotation_corr: NDArray[np.float64]
+    ) -> None:
+        self._fine_rotation_corr = fine_rotation_corr
+
+    def set_fine_translation_corr(
+        self: Frame, fine_translation_corr: NDArray[np.float64]
+    ) -> None:
+        self._fine_translation_corr = fine_translation_corr
 
     def set_fine_warped_image(
         self: Frame, fine_warped_image: NDArray[np.uint8]
