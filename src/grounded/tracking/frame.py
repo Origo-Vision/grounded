@@ -27,6 +27,8 @@ class Frame:
         self._coarse_rotation_corr: NDArray[np.float64] | None = None
         self._coarse_translation_corr: NDArray[np.float64] | None = None
         self._coarse_warped_image: NDArray[np.uint8] | None = None
+        self._fine_corr: NDArray[np.float64] | None = None
+        self._fine_warped_image: NDArray[np.uint8] | None = None
 
     def id(self: Frame) -> int:
         return self._id
@@ -48,3 +50,11 @@ class Frame:
         self: Frame, coarse_warped_image: NDArray[np.uint8]
     ) -> None:
         self._coarse_warped_image = coarse_warped_image
+
+    def set_fine_corr(self: Frame, fine_corr: NDArray[np.float64]) -> None:
+        self._fine_corr = fine_corr
+
+    def set_fine_warped_image(
+        self: Frame, fine_warped_image: NDArray[np.uint8]
+    ) -> None:
+        self._fine_warped_image = fine_warped_image

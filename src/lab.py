@@ -96,6 +96,17 @@ def main(options: argparse.Namespace) -> int:
     plt.axis("off")
     plt.title("Coarse translation corr")
 
+    # Fine registration images.
+    plt.subplot(4, 3, 10)
+    plt.imshow(qry._fine_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine warped image (qry => ref)")
+
+    plt.subplot(4, 3, 12)
+    plt.imshow(qry._fine_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine corr")
+
     plt.tight_layout()
     plt.show()
 
