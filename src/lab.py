@@ -10,16 +10,11 @@ import grounded.image.transform as transform
 import grounded.math.matrix as matrix
 import grounded.tracking.stitching as stitching
 from grounded.tracking.tracker import Tracker
-from grounded.tracking.kcc_tracker import KCCTracker
 
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = (
-        KCCTracker(size=options.size, debug=True)
-        if options.kcc
-        else Tracker(size=options.size, debug=True)
-    )
+    tracker = Tracker(size=options.size, kcc=options.kcc, debug=True)
 
     # Get the reference image.
     ref_image = dataset[options.reference]
@@ -95,6 +90,17 @@ def main(options: argparse.Namespace) -> int:
     plt.imshow(qry._coarse_translation_corr, cmap="gray")
     plt.axis("off")
     plt.title("Coarse translation corr")
+
+    # Fine registration images.
+    plt.subplot(4, 3, 10)
+    plt.imshow(qry._fine_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine warped image (qry => ref)")
+
+    plt.subplot(4, 3, 12)
+    plt.imshow(qry._fine_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine corr")
 
     plt.tight_layout()
     plt.show()

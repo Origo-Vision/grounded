@@ -41,6 +41,7 @@ def peak_location(heatmap: NDArray[np.float64]) -> tuple[NDArray[np.float64], fl
 
     i = np.argmax(heatmap)
     xy = np.array([i % w, i // w])
+
     try:
         # Iterative subpixel might come up with a singular matrix.
         # Most often near borders.
@@ -75,10 +76,13 @@ def peak_sidelobe_ratio(
 
     patch = heatmap[starty : endy + 1, startx : endx + 1]
 
-    max_value = float(np.max(patch))
-    mean_value = float(np.mean(patch))
-    std_value = max(float(np.std(patch)), 1e-15)
-    return (max_value - mean_value) / std_value
+    if patch.size > 0:
+        max_value = float(np.max(patch))
+        mean_value = float(np.mean(patch))
+        std_value = max(float(np.std(patch)), 1e-15)
+        return (max_value - mean_value) / std_value
+    else:
+        return 0.0
 
 
 def iterative_subpixel(
@@ -232,7 +236,7 @@ def interpolate_quad(heatmap: NDArray[np.float64], x: float, y: float) -> float:
     """
     h, w = heatmap.shape
 
-    xi, yi = min(int(x), w - 1), min(int(y), h - 1)
+    xi, yi = min(max(int(x), 0), w - 1), min(max(int(y), 0), h - 1)
     if xi > 0 and xi < w - 2 and yi > 0 and yi < h - 2:
         xf, yf = x - xi, y - yi
         sx, sy = cubic_spline(xf), cubic_spline(yf)

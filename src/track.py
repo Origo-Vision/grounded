@@ -8,17 +8,12 @@ import numpy as np
 from grounded.dataset import Dataset
 import grounded.math.matrix as matrix
 from grounded.tracking.tracker import Tracker
-from grounded.tracking.kcc_tracker import KCCTracker
 import grounded.tracking.stitching as stitching
 
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = (
-        KCCTracker(size=options.size, debug=True)
-        if options.kcc
-        else Tracker(size=options.size, debug=True)
-    )
+    tracker = Tracker(size=options.size, kcc=options.kcc, debug=True)
 
     start = options.start
     end = (
@@ -40,7 +35,7 @@ def main(options: argparse.Namespace) -> int:
 
         A, psr = tracker.track_frame(ref=keyframes[-1], qry=frame)
         xy, theta = matrix.decomp_affine(
-            M=A, cx=(options.size- 1) * 0.5, cy=(options.size - 1) * 0.5
+            M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
         )
         print(
             f" theta={theta:.2f}{chr(176)}, xt={xy[0]:.2f}px, yt={xy[1]:.2f}px, psr={psr:.2f}"
@@ -74,7 +69,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("datadir", type=pathlib.Path, help="Path to dataset directory")
     parser.add_argument(
-        "--size", choices=[256, 512], default=256*2, help="The image size"
+        "--size", choices=[256, 512], default=256, help="The image size"
     )
     parser.add_argument(
         "--start", type=int, default=0, help="First image in the dataset"
