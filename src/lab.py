@@ -32,7 +32,7 @@ def main(options: argparse.Namespace) -> int:
     qry = tracker.new_frame(image=qry_image)
 
     # Track the query relative to the reference.
-    A, psr = tracker.track_frame(ref=ref, qry=qry)
+    A, psr = tracker.track_frame2(ref=ref, qry=qry)
 
     xy, theta = matrix.decomp_affine(
         M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
@@ -92,16 +92,20 @@ def main(options: argparse.Namespace) -> int:
     plt.title("Coarse translation corr")
 
     # Fine registration images.
-    if qry._fine_warped_image is not None:
-        plt.subplot(4, 3, 10)
-        plt.imshow(qry._fine_warped_image, cmap="gray")
-        plt.axis("off")
-        plt.title("Fine warped image (qry => ref)")
+    plt.subplot(4, 3, 10)
+    plt.imshow(qry._fine_warped_image, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine warped image (qry => ref)")
+
+    plt.subplot(4, 3, 11)
+    plt.imshow(qry._fine_rotation_corr, cmap="gray")
+    plt.axis("off")
+    plt.title("Fine rotation corr")
 
     plt.subplot(4, 3, 12)
-    plt.imshow(qry._fine_corr, cmap="gray")
+    plt.imshow(qry._fine_translation_corr, cmap="gray")
     plt.axis("off")
-    plt.title("Fine corr")
+    plt.title("Fine translation corr")
 
     plt.tight_layout()
     plt.show()

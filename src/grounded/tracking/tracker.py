@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from typing import cast
+from typing import Any, cast
 
 import cv2 as cv
 import numpy as np
@@ -153,6 +153,56 @@ class Tracker:
         # Return the affine matrix, and the translation psr.
         return A, (coarse_psr + fine_psr) / 2.0
 
+    def track_frame2(
+        self: Tracker, ref: Frame, qry: Frame
+    ) -> tuple[NDArray[np.float64], float]:
+        """
+        Track the query frame relative to the reference frame.
+
+        Parameters:
+            ref: The reference frame.
+            qry: The query frame.
+
+        Returns:
+            Tuple affine forward matrix, and psr from coarse registration.
+        """
+        coarse = self._registration_kcc(
+            ref=ref,
+            qry_image=qry._image,
+            qry_polar_spectrum_fft=qry._polar_spectrum_fft,
+        )
+
+        coarse_warped = coarse["warped"]
+
+        normalized_filtered_image = image_utils.normalized(
+            coarse_warped * self._image_window
+        )
+        spectrum = self._create_spectrum(normalized_filtered_image)
+        polar_spectrum_fft = np.fft.rfft2(
+            self._polar_warp(spectrum) * self._polar_window
+        )
+
+        fine = self._registration_kcc(
+            ref=ref,
+            qry_image=coarse_warped,
+            qry_polar_spectrum_fft=polar_spectrum_fft,
+        )
+
+        A = fine["affine"] @ coarse["affine"]
+        qry._H = A @ ref._H
+
+        psr = (coarse["psr"] + fine["psr"]) / 2.0
+
+        if self._debug:
+            qry.set_coarse_rotation_corr(np.clip(coarse["rotation_corr"], 0.0, 1.0))
+            qry.set_coarse_translation_corr(np.clip(coarse["translation_corr"], 0.0, 1.0))
+            qry.set_coarse_warped_image(coarse_warped)
+            qry.set_fine_rotation_corr(np.clip(fine["rotation_corr"], 0.0, 1.0))
+            qry.set_fine_translation_corr(np.clip(fine["translation_corr"], 0.0, 1.0))
+            qry.set_fine_warped_image(fine["warped"])
+
+        return A, psr
+
     def _coarse_registration_fmt(
         self: Tracker, ref: Frame, qry: Frame
     ) -> tuple[NDArray[np.float64], NDArray[np.uint8], float]:
@@ -270,6 +320,68 @@ class Tracker:
 
         return M, coarse_warped_image, translation_psr
 
+    def _registration_kcc(
+        self: Tracker,
+        ref: Frame,
+        qry_image: NDArray[np.uint8],
+        qry_polar_spectrum_fft: NDArray[np.complex128],
+    ) -> dict[str, Any]:
+        # Find the global rotation.
+        rotation_offset, rotation_psr, rotation_corr = (
+            self._calculate_kernel_correlation(
+                fft=qry_polar_spectrum_fft,
+                ref_fft=ref._polar_spectrum_fft,
+                target_fft=self._polar_target_fft,
+            )
+        )
+
+        _, yt = rotation_offset
+        theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
+        # print(f"coarse theta={theta:.2f}, psr={rotation_psr:.2f}")
+
+        # Rectify the query image with regards to the rotation.
+        rotated = transform.warp_affine(qry_image, theta=-theta, xt=0.0, yt=0.0)
+
+        # Find the global translation using the rectified image.
+        translation_offset, translation_psr, translation_corr = (
+            self._calculate_kernel_correlation(
+                fft=np.fft.rfft2(image_utils.normalized(rotated) * self._image_window),
+                ref_fft=ref._image_fft,
+                target_fft=self._image_target_fft,
+            )
+        )
+
+        # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
+        # to get the true translation.
+        xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
+        # print(f"coarse xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+
+        # Create the forward (ref => qry) affine matrix.
+        M = matrix.affine(
+            theta=theta,
+            xt=xt,
+            yt=yt,
+            cx=(self._image_width - 1) * 0.5,
+            cy=(self._image_height - 1) * 0.5,
+        )
+
+        # Get the reverse (qry => ref) affine matrix for warping.
+        Minv = np.linalg.inv(M)
+        warped = cast(
+            NDArray[np.uint8],
+            cv.warpAffine(
+                qry_image, M=Minv[:2], dsize=(self._image_width, self._image_height)
+            ),
+        )
+
+        return {
+            "affine": M,
+            "warped": warped,
+            "psr": (rotation_psr + translation_psr) / 2,
+            "rotation_corr": rotation_corr,
+            "translation_corr": translation_corr,
+        }
+
     def _fine_registration(
         self: Tracker,
         qry: Frame,
@@ -324,8 +436,8 @@ class Tracker:
                 except Exception as e:
                     print(f"Warning: {e}")
 
-        if fine_corr is not None:
-            qry.set_fine_corr(np.clip(fine_corr, 0.0, 1.0))
+        #if fine_corr is not None:
+            #qry.set_fine_corr(np.clip(fine_corr, 0.0, 1.0))
 
         mean_psr = psr_sum / 16.0
         if len(reference_points) > 4:
