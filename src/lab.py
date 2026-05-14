@@ -132,7 +132,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
     parser.add_argument(
-        "--size", choices=(256, 512), default=256, help="The image size"
+        "--size", type=int, choices=(128, 256, 512), default=256, help="The image size"
     )
     parser.add_argument(
         "--theta", type=float, default=0.0, help="Rotation angle (degrees)"

@@ -37,7 +37,7 @@ class Tracker:
         # General settings.
         self._image_height = size
         self._image_width = size
-        self._polar_height = 360
+        self._polar_height = 360 * 2
         self._polar_width = size // 2
         self._polar_center = (self._image_width / 2, self._image_height / 2)
         self._polar_max_radius = size / 2.0
