@@ -306,20 +306,23 @@ class Tracker:
                     image_utils.normalized(qry_patch) * self._patch_window
                 )
 
-                patch_corr, patch_offset, patch_psr = self._correlate(
-                    ref_fft=ref_fft, qry_fft=qry_fft
-                )
-                psr_sum += patch_psr
+                try:
+                    patch_corr, patch_offset, patch_psr = self._correlate(
+                        ref_fft=ref_fft, qry_fft=qry_fft
+                    )
+                    psr_sum += patch_psr
 
-                if patch_psr > psr_threshold:
-                    reference_point = patch_center + (xstart, ystart)
-                    reference_points.append(reference_point)
+                    if patch_psr > psr_threshold:
+                        reference_point = patch_center + (xstart, ystart)
+                        reference_points.append(reference_point)
 
-                    query_point = reference_point + patch_offset
-                    query_points.append(query_point)
+                        query_point = reference_point + patch_offset
+                        query_points.append(query_point)
 
-                if fine_corr is not None:
-                    fine_corr[ystart:yend, xstart:xend] = patch_corr
+                    if fine_corr is not None:
+                        fine_corr[ystart:yend, xstart:xend] = patch_corr
+                except Exception as e:
+                    print(f"Warning: {e}")
 
         if fine_corr is not None:
             qry.set_fine_corr(np.clip(fine_corr, 0.0, 1.0))
@@ -392,6 +395,9 @@ class Tracker:
         cps[1:] /= np.abs(cps[1:]) + 1e-15
 
         corr_map = np.fft.fftshift(np.fft.irfft2(cps))
+        if np.max(corr_map) < 1e-07:
+            raise ValueError("Zero valued correlation map")
+
         xy, _ = heatmap.peak_location(heatmap=corr_map)
 
         h, w = corr_map.shape
