@@ -33,7 +33,7 @@ def main(options: argparse.Namespace) -> int:
 
         print(f"Frame #{frame.id()} tracking keyframe #{keyframes[-1].id()}")
 
-        A, psr = tracker.track_frame2(ref=keyframes[-1], qry=frame)
+        A, psr = tracker.track_frame(ref=keyframes[-1], qry=frame)
         xy, theta = matrix.decomp_affine(
             M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
         )

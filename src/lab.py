@@ -32,7 +32,7 @@ def main(options: argparse.Namespace) -> int:
     qry = tracker.new_frame(image=qry_image)
 
     # Track the query relative to the reference.
-    A, psr = tracker.track_frame2(ref=ref, qry=qry)
+    A, psr = tracker.track_frame(ref=ref, qry=qry)
 
     xy, theta = matrix.decomp_affine(
         M=A, cx=(options.size - 1) * 0.5, cy=(options.size - 1) * 0.5
