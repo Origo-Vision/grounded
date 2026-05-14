@@ -10,16 +10,11 @@ import grounded.image.transform as transform
 import grounded.math.matrix as matrix
 import grounded.tracking.stitching as stitching
 from grounded.tracking.tracker import Tracker
-from grounded.tracking.kcc_tracker import KCCTracker
 
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = (
-        KCCTracker(size=options.size, debug=True)
-        if options.kcc
-        else Tracker(size=options.size, debug=True)
-    )
+    tracker = Tracker(size=options.size, kcc=options.kcc, debug=True)
 
     # Get the reference image.
     ref_image = dataset[options.reference]
