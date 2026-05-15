@@ -22,7 +22,12 @@ class Tracker:
     """
 
     def __init__(
-        self: Tracker, size: int, kcc: bool = False, debug: bool = False
+        self: Tracker,
+        size: int,
+        low: float = 0.05,
+        high: float = 0.5,
+        kcc: bool = False,
+        debug: bool = False,
     ) -> None:
         """
         Construct the tracker.
@@ -41,6 +46,9 @@ class Tracker:
         self._polar_width = size // 2
         self._polar_center = (self._image_width / 2, self._image_height / 2)
         self._polar_max_radius = size / 2.0
+
+        self._low = low
+        self._high = high
 
         # Polar filtering settings.
         self._rmin = 5
@@ -100,6 +108,8 @@ class Tracker:
             and image.dtype != np.uint8
         ):
             raise ValueError("Expecting an 8-bit grayscale, of the specified shape")
+        
+        image = image_utils.bandpass_filtered(image, low=self._low, high=self._high)
 
         normalized_filtered_image = image_utils.normalized(image) * self._image_window
         image_fft = np.fft.rfft2(normalized_filtered_image)
@@ -187,7 +197,6 @@ class Tracker:
 
         return A, psr
 
-
     def _registration_fmt(
         self: Tracker,
         ref: Frame,
@@ -201,7 +210,7 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        #print(f"fmt theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"fmt theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         rotated = transform.warp_affine(qry_image, theta=-theta, xt=0.0, yt=0.0)
@@ -215,7 +224,7 @@ class Tracker:
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
         # to get the true translation.
         xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
-        #print(f"fmt xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+        # print(f"fmt xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
         # Create the forward (ref => qry) affine matrix.
         M = matrix.affine(
@@ -260,7 +269,7 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        #print(f"kcc theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"kcc theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         rotated = transform.warp_affine(qry_image, theta=-theta, xt=0.0, yt=0.0)
@@ -277,7 +286,7 @@ class Tracker:
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
         # to get the true translation.
         xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
-        #print(f"kcc xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+        # print(f"kcc xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
         # Create the forward (ref => qry) affine matrix.
         M = matrix.affine(
