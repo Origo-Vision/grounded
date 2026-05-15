@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import glob
 import pathlib
 from typing import cast
 
@@ -14,7 +15,8 @@ class Dataset:
     """
     Dataset utility class. Handles datasets where inside the specified directory find:
     - The file "image_names.txt", containing a list of image files, sorted in order.
-    - The directory "rgb", containing the image files.
+    - The directory "rgb", containing the image files OR
+    - Files named scene_[num].png.
     """
 
     def __init__(self: Dataset, datadir: pathlib.Path, shape: tuple[int, int]) -> None:
@@ -25,34 +27,34 @@ class Dataset:
             datadir: The data directory.
             shape: The requested shape of returned images.
         """
+        self._shape = shape
+        self._image_names = []
+        self._current = 0
 
         if not datadir.is_dir():
             raise ValueError(f"Error: '{datadir}' is not a directory")
 
         image_names_path = datadir / "image_names.txt"
-        if not image_names_path.is_file():
-            raise ValueError(f"Error: file '{image_names_path}' is not found")
+        if image_names_path.is_file():
+            rgb_path = datadir / "rgb"
+            if not rgb_path.is_dir():
+                raise ValueError(f"Error: directory '{rgb_path}' is not found")
 
-        rgb_path = datadir / "rgb"
-        if not rgb_path.is_dir():
-            raise ValueError(f"Error: directory '{rgb_path}' is not found")
-
-        self._image_names = []
-        with open(image_names_path, "r") as f:
-            done = False
-            while not done:
-                name = f.readline().strip("\n")
-                if name != "":
-                    path = rgb_path / name
-                    self._image_names.append(path)
-
-                    if not path.is_file():
-                        raise ValueError(f"Error: file '{path}' does not exist")
-                else:
-                    done = True
-
-        self._shape = shape
-        self._current = 0
+            with open(image_names_path, "r") as f:
+                done = False
+                while not done:
+                    name = f.readline().strip("\n")
+                    if name != "":
+                        path = rgb_path / name
+                        self._image_names.append(path)
+                        if not path.is_file():
+                            raise ValueError(f"Error: file '{path}' does not exist")
+                    else:
+                        done = True
+        else:
+            self._image_names = list(
+                sorted(map(pathlib.Path, glob.glob(str(datadir / "scene_*.png"))))
+            )
 
     def __len__(self: Dataset) -> int:
         return len(self._image_names)
