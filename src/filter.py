@@ -14,8 +14,8 @@ def main(options: argparse.Namespace) -> int:
         shape=(options.size, options.size), low=options.low, high=options.high
     )
 
-    ref_image = image_utils.normalized(dataset[options.reference])
-    qry_image = image_utils.normalized(dataset[options.query])
+    ref_image = dataset[options.reference]
+    qry_image = dataset[options.query]
 
     ref_image_filtered = image_utils.bandpass_filtered(
         ref_image, low=options.low, high=options.high

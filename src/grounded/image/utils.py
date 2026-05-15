@@ -78,13 +78,19 @@ def resized(image: NDArray[np.uint8], shape: tuple[int, int]) -> NDArray[np.uint
 
 
 def bandpass_filtered(
-    image: NDArray[np.float64], low: float, high: float
-) -> NDArray[np.float64]:
-    F = np.fft.fftshift(np.fft.fft2(image))
+    image: NDArray[np.uint8], low: float, high: float
+) -> NDArray[np.uint8]:
+    image_float = image.astype(np.float64) / 255.0
+
+    F = np.fft.fftshift(np.fft.fft2(image_float))
     mask = bandpass_mask(image.shape, low=low, high=high)
 
-    f = np.fft.ifft2(np.fft.ifftshift(F * mask))
-    return f.real
+    f = np.fft.ifft2(np.fft.ifftshift(F * mask)).real
+
+    min_f, max_f = f.min(), f.max()
+    f = (f - min_f) / (max_f - min_f)
+
+    return (f * 255.0).astype(np.uint8)
 
 
 def tukey_window(shape: tuple[int, int], alpha: float = 0.25) -> NDArray[np.float64]:
