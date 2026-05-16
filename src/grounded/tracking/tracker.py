@@ -22,7 +22,11 @@ class Tracker:
     """
 
     def __init__(
-        self: Tracker, size: int, kcc: bool = False, debug: bool = False
+        self: Tracker,
+        size: int,
+        filter: bool = True,
+        fmt: bool = False,
+        debug: bool = False,
     ) -> None:
         """
         Construct the tracker.
@@ -42,6 +46,9 @@ class Tracker:
         self._polar_center = (self._image_width / 2, self._image_height / 2)
         self._polar_max_radius = size / 2.0
 
+        self._low = 0.05
+        self._high = 0.5
+
         # Polar filtering settings.
         self._rmin = 5
         self._rmax = 5
@@ -52,7 +59,8 @@ class Tracker:
         self._kernel_lambda = 0.1
 
         # Runtime flags.
-        self._kcc = kcc
+        self._filter = filter
+        self._fmt = fmt
         self._debug = debug
 
         # Coarse windowing.
@@ -101,6 +109,10 @@ class Tracker:
         ):
             raise ValueError("Expecting an 8-bit grayscale, of the specified shape")
 
+        original = image.copy()
+        if self._filter:
+            image = image_utils.bandpass_filtered(image, low=self._low, high=self._high)
+
         normalized_filtered_image = image_utils.normalized(image) * self._image_window
         image_fft = np.fft.rfft2(normalized_filtered_image)
         spectrum = self._create_spectrum(normalized_filtered_image)
@@ -109,6 +121,7 @@ class Tracker:
         )
 
         frame = Frame(
+            original=original,
             image=image,
             image_fft=image_fft,
             polar_spectrum_fft=polar_spectrum_fft,
@@ -133,13 +146,13 @@ class Tracker:
             Tuple affine forward matrix, and psr from coarse registration.
         """
         coarse = (
-            self._registration_kcc(
+            self._registration_fmt(
                 ref=ref,
                 qry_image=qry._image,
                 qry_polar_spectrum_fft=qry._polar_spectrum_fft,
             )
-            if self._kcc
-            else self._registration_fmt(
+            if self._fmt
+            else self._registration_kcc(
                 ref=ref,
                 qry_image=qry._image,
                 qry_polar_spectrum_fft=qry._polar_spectrum_fft,
@@ -157,13 +170,13 @@ class Tracker:
         )
 
         fine = (
-            self._registration_kcc(
+            self._registration_fmt(
                 ref=ref,
                 qry_image=coarse_warped,
                 qry_polar_spectrum_fft=polar_spectrum_fft,
             )
-            if self._kcc
-            else self._registration_fmt(
+            if self._fmt
+            else self._registration_kcc(
                 ref=ref,
                 qry_image=coarse_warped,
                 qry_polar_spectrum_fft=polar_spectrum_fft,
@@ -187,7 +200,6 @@ class Tracker:
 
         return A, psr
 
-
     def _registration_fmt(
         self: Tracker,
         ref: Frame,
@@ -201,7 +213,7 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        #print(f"fmt theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"fmt theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         rotated = transform.warp_affine(qry_image, theta=-theta, xt=0.0, yt=0.0)
@@ -215,7 +227,7 @@ class Tracker:
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
         # to get the true translation.
         xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
-        #print(f"fmt xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+        # print(f"fmt xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
         # Create the forward (ref => qry) affine matrix.
         M = matrix.affine(
@@ -260,7 +272,7 @@ class Tracker:
 
         _, yt = rotation_offset
         theta = math_utils.normalize_degrees(yt * (2.0 / self._polar_height) * 180.0)
-        #print(f"kcc theta={theta:.2f}, psr={rotation_psr:.2f}")
+        # print(f"kcc theta={theta:.2f}, psr={rotation_psr:.2f}")
 
         # Rectify the query image with regards to the rotation.
         rotated = transform.warp_affine(qry_image, theta=-theta, xt=0.0, yt=0.0)
@@ -277,7 +289,7 @@ class Tracker:
         # The translation offset vector is rotated R(-theta) @ t. Rotate with theta
         # to get the true translation.
         xt, yt, _ = matrix.rotate(theta) @ np.append(translation_offset, 1.0)
-        #print(f"kcc xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
+        # print(f"kcc xt={xt:.2f}, yt={yt:.2f}, psr={translation_psr:.2f}")
 
         # Create the forward (ref => qry) affine matrix.
         M = matrix.affine(
