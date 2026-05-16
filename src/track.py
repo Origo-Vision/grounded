@@ -56,7 +56,7 @@ def main(options: argparse.Namespace) -> int:
     print(f"Stitching {len(keyframes)} frames")
     map = stitching.stitch_frames(frames=keyframes)
     if map is not None:
-        plt.figure(figsize=(12, 12))
+        plt.figure(figsize=(14, 14))
         plt.imshow(map, cmap="gray")
         plt.title("Stitched Track Map")
         plt.axis("off")

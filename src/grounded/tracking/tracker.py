@@ -109,6 +109,7 @@ class Tracker:
         ):
             raise ValueError("Expecting an 8-bit grayscale, of the specified shape")
 
+        original = image.copy()
         if self._filter:
             image = image_utils.bandpass_filtered(image, low=self._low, high=self._high)
 
@@ -120,6 +121,7 @@ class Tracker:
         )
 
         frame = Frame(
+            original=original,
             image=image,
             image_fft=image_fft,
             polar_spectrum_fft=polar_spectrum_fft,
