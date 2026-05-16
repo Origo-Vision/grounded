@@ -24,9 +24,8 @@ class Tracker:
     def __init__(
         self: Tracker,
         size: int,
-        low: float = 0.05,
-        high: float = 0.5,
-        kcc: bool = False,
+        filter: bool = True,
+        fmt: bool = False,
         debug: bool = False,
     ) -> None:
         """
@@ -47,8 +46,8 @@ class Tracker:
         self._polar_center = (self._image_width / 2, self._image_height / 2)
         self._polar_max_radius = size / 2.0
 
-        self._low = low
-        self._high = high
+        self._low = 0.05
+        self._high = 0.5
 
         # Polar filtering settings.
         self._rmin = 5
@@ -60,7 +59,8 @@ class Tracker:
         self._kernel_lambda = 0.1
 
         # Runtime flags.
-        self._kcc = kcc
+        self._filter = filter
+        self._fmt = fmt
         self._debug = debug
 
         # Coarse windowing.
@@ -108,8 +108,9 @@ class Tracker:
             and image.dtype != np.uint8
         ):
             raise ValueError("Expecting an 8-bit grayscale, of the specified shape")
-        
-        image = image_utils.bandpass_filtered(image, low=self._low, high=self._high)
+
+        if self._filter:
+            image = image_utils.bandpass_filtered(image, low=self._low, high=self._high)
 
         normalized_filtered_image = image_utils.normalized(image) * self._image_window
         image_fft = np.fft.rfft2(normalized_filtered_image)
@@ -143,13 +144,13 @@ class Tracker:
             Tuple affine forward matrix, and psr from coarse registration.
         """
         coarse = (
-            self._registration_kcc(
+            self._registration_fmt(
                 ref=ref,
                 qry_image=qry._image,
                 qry_polar_spectrum_fft=qry._polar_spectrum_fft,
             )
-            if self._kcc
-            else self._registration_fmt(
+            if self._fmt
+            else self._registration_kcc(
                 ref=ref,
                 qry_image=qry._image,
                 qry_polar_spectrum_fft=qry._polar_spectrum_fft,
@@ -167,13 +168,13 @@ class Tracker:
         )
 
         fine = (
-            self._registration_kcc(
+            self._registration_fmt(
                 ref=ref,
                 qry_image=coarse_warped,
                 qry_polar_spectrum_fft=polar_spectrum_fft,
             )
-            if self._kcc
-            else self._registration_fmt(
+            if self._fmt
+            else self._registration_kcc(
                 ref=ref,
                 qry_image=coarse_warped,
                 qry_polar_spectrum_fft=polar_spectrum_fft,

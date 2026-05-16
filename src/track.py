@@ -13,7 +13,9 @@ import grounded.tracking.stitching as stitching
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = Tracker(size=options.size, kcc=options.kcc, debug=True)
+    tracker = Tracker(
+        size=options.size, filter=options.no_filter, fmt=options.fmt, debug=True
+    )
 
     start = options.start
     end = (
@@ -77,7 +79,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--num-items", type=int, default=None, help="The number of items to track"
     )
-    parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
+    parser.add_argument("--fmt", action="store_true", help="Use the FMT based tracker")
+    parser.add_argument(
+        "--no-filter", action="store_false", help="Disable bandpass filtering"
+    )
     parser.add_argument("--thr-psr", type=float, default=6.0, help="PSR threshold")
     parser.add_argument(
         "--thr-translate",
