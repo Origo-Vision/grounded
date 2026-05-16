@@ -77,6 +77,22 @@ def resized(image: NDArray[np.uint8], shape: tuple[int, int]) -> NDArray[np.uint
         return image
 
 
+def bandpass_filtered(
+    image: NDArray[np.uint8], low: float, high: float
+) -> NDArray[np.uint8]:
+    image_float = image.astype(np.float64) / 255.0
+
+    F = np.fft.fftshift(np.fft.fft2(image_float))
+    mask = bandpass_mask(image.shape, low=low, high=high)
+
+    f = np.fft.ifft2(np.fft.ifftshift(F * mask)).real
+
+    min_f, max_f = f.min(), f.max()
+    f = (f - min_f) / (max_f - min_f)
+
+    return (f * 255.0).astype(np.uint8)
+
+
 def tukey_window(shape: tuple[int, int], alpha: float = 0.25) -> NDArray[np.float64]:
     """
     Create a Tukey window.
@@ -90,3 +106,19 @@ def tukey_window(shape: tuple[int, int], alpha: float = 0.25) -> NDArray[np.floa
     """
     h, w = shape
     return np.outer(tukey(h, alpha=alpha), tukey(w, alpha=alpha))
+
+
+def bandpass_mask(
+    shape: tuple[int, int], low: float, high: float
+) -> NDArray[np.float64]:
+    h, w = shape
+    cy, cx = h // 2, w // 2
+
+    y = np.linspace(-cy, h - cy - 1, h) / (h // 2)
+    x = np.linspace(-cx, w - cx - 1, w) / (w // 2)
+    r = np.sqrt(x[np.newaxis, :] ** 2 + y[:, np.newaxis] ** 2)
+
+    lp = np.exp(-((r / high) ** 2) / 2.0)
+    hp = 1.0 - np.exp(-((r / low) ** 2) / 2.0)
+
+    return lp * hp

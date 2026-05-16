@@ -9,6 +9,7 @@ class Frame:
 
     def __init__(
         self: Frame,
+        original: NDArray[np.uint8],
         image: NDArray[np.uint8],
         image_fft: NDArray[np.complex128],
         polar_spectrum_fft: NDArray[np.complex128],
@@ -18,6 +19,7 @@ class Frame:
 
         self._H = np.eye(3)
 
+        self._original = original
         self._image = image
         self._image_fft = image_fft
         self._polar_spectrum_fft = polar_spectrum_fft

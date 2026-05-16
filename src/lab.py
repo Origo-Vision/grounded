@@ -14,7 +14,9 @@ from grounded.tracking.tracker import Tracker
 
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
-    tracker = Tracker(size=options.size, kcc=options.kcc, debug=True)
+    tracker = Tracker(
+        size=options.size, filter=options.no_filter, fmt=options.fmt, debug=True
+    )
 
     # Get the reference image.
     ref_image = dataset[options.reference]
@@ -130,7 +132,10 @@ if __name__ == "__main__":
         default=None,
         help="The (optional) query index from the dataset",
     )
-    parser.add_argument("--kcc", action="store_true", help="Use the KCC based tracker")
+    parser.add_argument("--fmt", action="store_true", help="Use the FMT based tracker")
+    parser.add_argument(
+        "--no-filter", action="store_false", help="Disable bandpass filtering"
+    )
     parser.add_argument(
         "--size", type=int, choices=(128, 256, 512), default=256, help="The image size"
     )
