@@ -15,7 +15,11 @@ from grounded.tracking.tracker import Tracker
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
     tracker = Tracker(
-        size=options.size, filter=options.no_filter, fmt=options.fmt, debug=True
+        size=options.size,
+        filter=options.no_filter,
+        fine=options.no_fine,
+        fmt=options.fmt,
+        debug=True,
     )
 
     # Get the reference image.
@@ -94,20 +98,21 @@ def main(options: argparse.Namespace) -> int:
     plt.title("Coarse translation corr")
 
     # Fine registration images.
-    plt.subplot(4, 3, 10)
-    plt.imshow(qry._fine_warped_image, cmap="gray")
-    plt.axis("off")
-    plt.title("Fine warped image (qry => ref)")
+    if options.no_fine:
+        plt.subplot(4, 3, 10)
+        plt.imshow(qry._fine_warped_image, cmap="gray")
+        plt.axis("off")
+        plt.title("Fine warped image (qry => ref)")
 
-    plt.subplot(4, 3, 11)
-    plt.imshow(qry._fine_rotation_corr, cmap="gray")
-    plt.axis("off")
-    plt.title("Fine rotation corr")
+        plt.subplot(4, 3, 11)
+        plt.imshow(qry._fine_rotation_corr, cmap="gray")
+        plt.axis("off")
+        plt.title("Fine rotation corr")
 
-    plt.subplot(4, 3, 12)
-    plt.imshow(qry._fine_translation_corr, cmap="gray")
-    plt.axis("off")
-    plt.title("Fine translation corr")
+        plt.subplot(4, 3, 12)
+        plt.imshow(qry._fine_translation_corr, cmap="gray")
+        plt.axis("off")
+        plt.title("Fine translation corr")
 
     plt.tight_layout()
     plt.show()
@@ -135,6 +140,9 @@ if __name__ == "__main__":
     parser.add_argument("--fmt", action="store_true", help="Use the FMT based tracker")
     parser.add_argument(
         "--no-filter", action="store_false", help="Disable bandpass filtering"
+    )
+    parser.add_argument(
+        "--no-fine", action="store_false", help="Disable file adjustment"
     )
     parser.add_argument(
         "--size", type=int, choices=(128, 256, 512), default=256, help="The image size"

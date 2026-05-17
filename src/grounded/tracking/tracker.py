@@ -25,6 +25,7 @@ class Tracker:
         self: Tracker,
         size: int,
         filter: bool = True,
+        fine: bool = True,
         fmt: bool = False,
         debug: bool = False,
     ) -> None:
@@ -60,6 +61,7 @@ class Tracker:
 
         # Runtime flags.
         self._filter = filter
+        self._fine = fine
         self._fmt = fmt
         self._debug = debug
 
@@ -161,42 +163,47 @@ class Tracker:
 
         coarse_warped = coarse["warped"]
 
-        normalized_filtered_image = image_utils.normalized(
-            coarse_warped * self._image_window
-        )
-        spectrum = self._create_spectrum(normalized_filtered_image)
-        polar_spectrum_fft = np.fft.rfft2(
-            self._polar_warp(spectrum) * self._polar_window
-        )
-
-        fine = (
-            self._registration_fmt(
-                ref=ref,
-                qry_image=coarse_warped,
-                qry_polar_spectrum_fft=polar_spectrum_fft,
-            )
-            if self._fmt
-            else self._registration_kcc(
-                ref=ref,
-                qry_image=coarse_warped,
-                qry_polar_spectrum_fft=polar_spectrum_fft,
-            )
-        )
-
-        A = fine["affine"] @ coarse["affine"]
-        qry._H = A @ ref._H
-
-        psr = (coarse["psr"] + fine["psr"]) / 2.0
-
         if self._debug:
             qry.set_coarse_rotation_corr(np.clip(coarse["rotation_corr"], 0.0, 1.0))
             qry.set_coarse_translation_corr(
                 np.clip(coarse["translation_corr"], 0.0, 1.0)
             )
             qry.set_coarse_warped_image(coarse_warped)
-            qry.set_fine_rotation_corr(np.clip(fine["rotation_corr"], 0.0, 1.0))
-            qry.set_fine_translation_corr(np.clip(fine["translation_corr"], 0.0, 1.0))
-            qry.set_fine_warped_image(fine["warped"])
+
+        if self._fine:
+            normalized_filtered_image = image_utils.normalized(
+                coarse_warped * self._image_window
+            )
+            spectrum = self._create_spectrum(normalized_filtered_image)
+            polar_spectrum_fft = np.fft.rfft2(
+                self._polar_warp(spectrum) * self._polar_window
+            )
+
+            fine = (
+                self._registration_fmt(
+                    ref=ref,
+                    qry_image=coarse_warped,
+                    qry_polar_spectrum_fft=polar_spectrum_fft,
+                )
+                if self._fmt
+                else self._registration_kcc(
+                    ref=ref,
+                    qry_image=coarse_warped,
+                    qry_polar_spectrum_fft=polar_spectrum_fft,
+                )
+            )
+
+            if self._debug:
+                qry.set_fine_rotation_corr(np.clip(fine["rotation_corr"], 0.0, 1.0))
+                qry.set_fine_translation_corr(
+                    np.clip(fine["translation_corr"], 0.0, 1.0)
+                )
+                qry.set_fine_warped_image(fine["warped"])
+
+        A = fine["affine"] @ coarse["affine"] if self._fine else coarse["affine"]
+        qry._H = A @ ref._H
+
+        psr = (coarse["psr"] + fine["psr"]) / 2.0 if self._fine else coarse["psr"]
 
         return A, psr
 

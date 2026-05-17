@@ -14,7 +14,11 @@ import grounded.tracking.stitching as stitching
 def main(options: argparse.Namespace) -> int:
     dataset = Dataset(options.datadir, shape=(options.size, options.size))
     tracker = Tracker(
-        size=options.size, filter=options.no_filter, fmt=options.fmt, debug=True
+        size=options.size,
+        filter=options.no_filter,
+        fine=options.no_fine,
+        fmt=options.fmt,
+        debug=True,
     )
 
     start = options.start
@@ -82,6 +86,9 @@ if __name__ == "__main__":
     parser.add_argument("--fmt", action="store_true", help="Use the FMT based tracker")
     parser.add_argument(
         "--no-filter", action="store_false", help="Disable bandpass filtering"
+    )
+    parser.add_argument(
+        "--no-fine", action="store_false", help="Disable file adjustment"
     )
     parser.add_argument("--thr-psr", type=float, default=6.0, help="PSR threshold")
     parser.add_argument(
