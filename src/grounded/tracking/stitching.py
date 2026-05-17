@@ -38,7 +38,7 @@ def stitch_frames(frames: list[Frame]) -> NDArray[np.uint8] | None:
 
     # Map the frame's image corners into the first frames image space, to get the
     # dimensions for the canvas.
-    w, h = frames[0]._image.shape[::-1]
+    w, h = frames[0]._original.shape[::-1]
     corners = np.array(
         [
             [0.0, 0.0, 1.0],
@@ -72,7 +72,7 @@ def stitch_frames(frames: list[Frame]) -> NDArray[np.uint8] | None:
 
     for H, frame in zip(Hs, frames):
         warped_image = cv.warpPerspective(
-            frame._image, M=T @ H, dsize=canvas_size[::-1]
+            frame._original, M=T @ H, dsize=canvas_size[::-1]
         )
         warped_mask = cv.warpPerspective(mask, M=T @ H, dsize=canvas_size[::-1])
         accum += warped_image * warped_mask
